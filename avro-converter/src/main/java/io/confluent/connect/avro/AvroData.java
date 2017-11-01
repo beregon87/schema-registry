@@ -16,6 +16,7 @@
 
 package io.confluent.connect.avro;
 
+import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericEnumSymbol;
 import org.apache.avro.generic.GenericFixed;
 import org.apache.avro.generic.GenericRecord;
@@ -330,7 +331,7 @@ public class AvroData {
    * been converted and makes the use of NonRecordContainer optional
    *
    * @param schema                         the Connect schema
-   * @param avroSchema                     the corresponding
+   * @param avroSchema                     the corresponding Avro schema
    * @param logicalValue                   the Connect data to convert, which may be a value for
    *                                       a logical type
    * @param requireContainer               if true, wrap primitives, maps, and arrays in a
@@ -342,7 +343,7 @@ public class AvroData {
    *                                       null
    * @return the converted data
    */
-  private static Object fromConnectData(Schema schema, org.apache.avro.Schema avroSchema,
+  private Object fromConnectData(Schema schema, org.apache.avro.Schema avroSchema,
                                         Object logicalValue, boolean requireContainer, boolean
                                             requireSchemalessContainerNull) {
     Schema.Type schemaType = schema != null
@@ -427,8 +428,15 @@ public class AvroData {
               avroSchema,
               maybeWrapSchemaless(schema, value, ANYTHING_SCHEMA_BOOLEAN_FIELD),
               requireContainer);
-        case STRING:
+        case STRING: //TODO
           String stringValue = (String) value; // Check for correct type
+          if (enhancedSchemaSupport && avroSchema.getType() == org.apache.avro.Schema.Type.ENUM) {
+            //We obviously have a schema, so no need to wrap schemaless
+            return maybeAddContainer(
+                    avroSchema,
+                    new GenericData.EnumSymbol(avroSchema, value),
+                    requireContainer);
+          }
           return maybeAddContainer(
               avroSchema,
               maybeWrapSchemaless(schema, value, ANYTHING_SCHEMA_STRING_FIELD),
