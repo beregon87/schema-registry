@@ -428,7 +428,7 @@ public class AvroData {
               avroSchema,
               maybeWrapSchemaless(schema, value, ANYTHING_SCHEMA_BOOLEAN_FIELD),
               requireContainer);
-        case STRING: //TODO
+        case STRING:
           String stringValue = (String) value; // Check for correct type
           if (enhancedSchemaSupport && avroSchema.getType() == org.apache.avro.Schema.Type.ENUM) {
             //We obviously have a schema, so no need to wrap schemaless
