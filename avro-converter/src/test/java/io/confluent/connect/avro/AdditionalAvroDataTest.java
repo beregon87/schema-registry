@@ -1,18 +1,14 @@
 package io.confluent.connect.avro;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-
 import io.test.avro.core.AvroMessage;
 import io.test.avro.doc.DocTestRecord;
 import io.test.avro.union.FirstOption;
 import io.test.avro.union.MultiTypeUnionMessage;
 import io.test.avro.union.SecondOption;
-
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Parser;
 import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.reflect.Union;
@@ -23,6 +19,12 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.jemos.podam.api.PodamFactory;
 import uk.co.jemos.podam.api.PodamFactoryImpl;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+
+import static org.junit.Assert.assertTrue;
 
 public class AdditionalAvroDataTest
 {
@@ -38,6 +40,29 @@ public class AdditionalAvroDataTest
         avroData = new AvroData(avroDataConfig);
     }
 
+    @Test
+    public void testEnhancedEnumSupport() {
+        org.apache.avro.Schema childSchema = org.apache.avro.SchemaBuilder.enumeration("enumType")
+                .symbols("SYMBOL1", "SYMBOL2");
+        org.apache.avro.Schema schema = org.apache.avro.SchemaBuilder.record("parentSchema")
+                .fields()
+                .name("field1")
+                .type(childSchema)
+                .noDefault()
+                .endRecord();
+
+        GenericData.Record record = new GenericRecordBuilder(schema)
+                .set("field1", new GenericData.EnumSymbol(childSchema, "SYMBOL1"))
+                .build();
+
+        SchemaAndValue schemaAndValue = avroData.toConnectData(schema, record);
+        GenericRecord fromConnectData = (GenericRecord) avroData.fromConnectData(schemaAndValue.schema(),
+                schemaAndValue.value());
+        assertTrue(String.format("Record (%s) is not valid for schema (%s)",
+                record.get(0), childSchema), GenericData.get().validate(childSchema, record.get(0)));
+        assertTrue(String.format("Record (%s) is not valid for schema (%s)",
+                fromConnectData.get(0), childSchema), GenericData.get().validate(childSchema, fromConnectData.get(0)));
+    }
 
     @Test
     public void testDocumentationPreservedSchema() throws IOException
